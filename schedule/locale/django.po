@@ -1,0 +1,71 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: university_future\n"
+"Language: ky\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+# Общие надписи
+msgid "Расписание"
+msgstr "Расписание"  # можно перевести на кыргызский как "Расписание" или "Расписание"
+
+msgid "День / Группа"
+msgstr "Күн / Топ"
+
+msgid "Понедельник"
+msgstr "Дүйшөмбү"
+
+msgid "Вторник"
+msgstr "Шейшемби"
+
+msgid "Среда"
+msgstr "Шаршемби"
+
+msgid "Четверг"
+msgstr "Бейшемби"
+
+msgid "Пятница"
+msgstr "Жума"
+
+msgid "Выберите предмет и преподавателя"
+msgstr "Пандын жана мугалимдин тандоо"
+
+msgid "Предмет"
+msgstr "Сабак"
+
+msgid "Преподаватель"
+msgstr "Мугалим"
+
+msgid "Время"
+msgstr "Убакыт"
+
+msgid "Сохранить"
+msgstr "Сактоо"
+
+# Админка — модели
+msgid "Groups"
+msgstr "Топтор"
+
+msgid "Teachers"
+msgstr "Мугалимдер"
+
+msgid "Subjects"
+msgstr "Сабактар"
+
+msgid "Schedule Cells"
+msgstr "Расписаниелер"
+
+msgid "Add"
+msgstr "Кошуу"
+
+msgid "Change"
+msgstr "Өзгөртүү"
+
+msgid "Delete"
+msgstr "Өчүрүү"
+
+msgid "Save"
+msgstr "Сактоо"
+
+msgid "Search"
+msgstr "Издөө"

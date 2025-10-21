@@ -1,0 +1,238 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}">
+<head>
+    <meta charset="UTF-8">
+    <title>{% trans "Расписание" %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs" defer></script>
+</head>
+<body class="bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 min-h-screen flex flex-col items-center p-5">
+
+<!-- Schedule Table -->
+<div x-data="scheduleApp()" x-init="loadData()" class="w-full max-w-6xl">
+
+    <table class="table-auto w-full border-collapse border border-gray-300 text-center bg-white rounded-lg overflow-hidden shadow-lg">
+        <thead>
+            <tr class="bg-purple-200">
+                <th class="border p-2">{% trans "День / Группа" %}</th>
+                <template x-for="group in groups" :key="group.id">
+                    <th class="border p-2" x-text="group.name"></th>
+                </template>
+            </tr>
+        </thead>
+        <tbody>
+            <template x-for="day in translatedDays" :key="day">
+                <tr>
+                    <td class="border p-2 font-bold bg-purple-100" x-text="day"></td>
+                    <template x-for="group in groups" :key="group.id">
+                        <td class="border p-2">
+                            <template x-for="i in 5">
+                                <div class="border p-2 rounded hover:bg-purple-50 cursor-pointer mb-2 h-28 flex flex-col justify-center items-center"
+                                     @click="openModal(dayKeys[day], group.id, i-1)">
+                                    <div><strong x-text="getCell(dayKeys[day], group.id, i-1)?.subject_name || '-'"></strong></div>
+                                    <div x-text="getCell(dayKeys[day], group.id, i-1)?.teacher_name || '-'"></div>
+                                    <div x-text="getCell(dayKeys[day], group.id, i-1)?.time || ''"></div>
+                                </div>
+                            </template>
+                        </td>
+                    </template>
+                </tr>
+            </template>
+        </tbody>
+    </table>
+
+    <!-- Modal -->
+    <div x-show="modalOpen" x-cloak class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-5 rounded shadow-lg w-96 relative">
+            <button @click="closeModal()" class="absolute top-2 right-2 text-gray-600 hover:text-red-500 font-bold">&times;</button>
+            <h2 class="font-bold text-lg mb-4">{% trans "Редактировать" %}</h2>
+            <div class="mb-2">
+                <label class="block mb-1">{% trans "Предмет" %}:</label>
+                <select x-model="modalSubject" class="border p-2 w-full rounded">
+                    <template x-for="subject in subjects" :key="subject.id">
+                        <option :value="subject.id" x-text="subject.name"></option>
+                    </template>
+                </select>
+            </div>
+            <div class="mb-2">
+                <label class="block mb-1">{% trans "Преподаватель" %}:</label>
+                <select x-model="modalTeacher" class="border p-2 w-full rounded">
+                    <template x-for="teacher in teachers" :key="teacher.id">
+                        <option :value="teacher.id" x-text="teacher.name"></option>
+                    </template>
+                </select>
+            </div>
+            <div class="mb-4">
+                <label class="block mb-1">{% trans "Время" %}:</label>
+                <input type="time" x-model="modalTime" class="border p-2 w-full rounded">
+            </div>
+            <button @click="saveModal()" class="bg-purple-500 text-white p-2 rounded w-full">{% trans "Сохранить" %}</button>
+        </div>
+    </div>
+</div>
+
+<!-- Sticky Language Switch -->
+<form action="{% url 'set_language' %}" method="post" class="fixed bottom-4 left-4 bg-white p-3 rounded shadow-lg z-50">
+    {% csrf_token %}
+    <select name="language" onchange="this.form.submit()" class="p-2 rounded border">
+        <option value="ru" {% if LANGUAGE_CODE == 'ru' %}selected{% endif %}>Русский</option>
+        <option value="ky" {% if LANGUAGE_CODE == 'ky' %}selected{% endif %}>Кыргызча</option>
+    </select>
+</form>
+
+<script>
+function scheduleApp() {
+    return {
+        groups: [],
+        teachers: [],
+        subjects: [],
+        cells: [],
+        modalOpen: false,
+        modalCell: null,
+        modalSubject: null,
+        modalTeacher: null,
+        modalTime: null,
+
+        dayTranslations: {
+            'ru': ['Понедельник','Вторник','Среда','Четверг','Пятница'],
+            'ky': ['Дүйшөмбү','Шейшемби','Шаршемби','Бейшемби','Жума']
+        },
+
+        dayKeys: {
+            'Понедельник': 'Понедельник',
+            'Вторник': 'Вторник',
+            'Среда': 'Среда',
+            'Четверг': 'Четверг',
+            'Пятница': 'Пятница',
+            'Дүйшөмбү': 'Понедельник',
+            'Шейшемби': 'Вторник',
+            'Шаршемби': 'Среда',
+            'Бейшемби': 'Четверг',
+            'Жума': 'Пятница'
+        },
+
+        get translatedDays() {
+            let lang = '{{ LANGUAGE_CODE }}';
+            return this.dayTranslations[lang] || this.dayTranslations['ru'];
+        },
+
+        async loadData() {
+            const [g, t, s, c] = await Promise.all([
+                fetch('/api/groups/').then(r => r.json()),
+                fetch('/api/teachers/').then(r => r.json()),
+                fetch('/api/subjects/').then(r => r.json()),
+                fetch('/api/cells/').then(r => r.json())
+            ]);
+            this.groups = g;
+            this.teachers = t;
+            this.subjects = s;
+            this.cells = c;
+        },
+
+        getCell(day, groupId, index) {
+            let groupCells = this.cells.filter(c => c.group === groupId && c.day === day);
+            return groupCells[index] || null;
+        },
+
+        openModal(day, groupId, index) {
+            let cell = this.getCell(day, groupId, index);
+            if (!cell) {
+                cell = {id: null, day: day, group: groupId, subject: null, teacher: null, time: ''};
+            }
+            // this.modalCell = cell;
+            // this.modalSubject = cell.subject;
+            // this.modalTeacher = cell.teacher;
+            // this.modalTime = cell.time;
+            // this.modalOpen = true;
+            this.modalCell = cell;
+
+            // Важно: приводим ID к строке для select
+            this.modalSubject = cell.subject ? cell.subject.toString() : null;
+            this.modalTeacher = cell.teacher ? cell.teacher.toString() : null;
+
+            this.modalTime = cell.time || '';
+            this.modalOpen = true;
+        },
+        
+        closeModal() {
+            this.modalOpen = false;
+            this.modalCell = null;
+        },
+
+        // async saveModal() {
+        //     if (!this.modalCell) return;
+
+        //     const payload = {
+        //         subject: this.modalSubject,
+        //         teacher: this.modalTeacher,
+        //         time: this.modalTime,
+        //         day: this.modalCell.day,
+        //         group: this.modalCell.group
+        //     };
+
+        //     let url = this.modalCell.id ? `/api/cells/${this.modalCell.id}/` : '/api/cells/';
+        //     let method = this.modalCell.id ? 'PUT' : 'POST';
+
+        //     const response = await fetch(url, {
+        //         method: method,
+        //         headers: {
+        //             'Content-Type': 'application/json',
+        //             'X-CSRFToken': '{{ csrf_token }}'
+        //         },
+        //         body: JSON.stringify(payload)
+        //     });
+
+        //     if (response.ok) {
+        //         const savedCell = await response.json();
+        //         if (!this.modalCell.id) {
+        //             this.cells.push(savedCell);
+        //         } else {
+        //             Object.assign(this.modalCell, savedCell);
+        //         }
+        //         this.closeModal();
+        //     } else {
+        //         alert('{% trans "Ошибка сохранения!" %}');
+        //     }
+        // }
+        async saveModal() {
+            if (!this.modalCell) return;
+
+            const payload = {
+                subject: parseInt(this.modalSubject),
+                teacher: parseInt(this.modalTeacher),
+                time: this.modalTime,
+                day: this.modalCell.day,
+                group: this.modalCell.group
+            };
+
+            let url = this.modalCell.id ? `/api/cells/${this.modalCell.id}/` : '/api/cells/';
+            let method = this.modalCell.id ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                const savedCell = await response.json();
+                if (!this.modalCell.id) {
+                    this.cells.push(savedCell);
+                } else {
+                    Object.assign(this.modalCell, savedCell);
+                }
+                this.closeModal();
+            } else {
+                alert('{% trans "Ошибка сохранения!" %}');
+            }
+        }
+    }
+}
+</script>
+
+</body>
+</html>
